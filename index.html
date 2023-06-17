@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html>
+<meta name="viewport" content="user-scalable=no" />
+<head>
+    <link rel="icon" href="./favicon.ico" type="image/x-icon">
+    <title>Steep finance | Just a Step Finance meme game lol</title>
+    <style>
+        html, body {
+        overflow-x: hidden;
+        }
+        body {
+            background-color: black;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 85vh;
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+        }
+
+        .not-selectable {
+        -webkit-touch-callout: none;
+        -webkit-user-select: none;
+        -khtml-user-select: none;
+        -moz-user-select: none;
+        -ms-user-select: none;
+        user-select: none;
+        }
+
+
+        #gameContainer {
+            background-image: url("./back.png");
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: auto; /* Set width to 60% of the available space */
+            height: auto; /* Let the height adjust based on the content */
+        }
+
+        canvas {
+            border: 1px solid black;
+            width: 100%; /* Take up full width of the parent container */
+            height: 100%; /* Let the height adjust based on the width */
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        #buttonContainer {
+            display: flex;
+            justify-content: center;
+            margin-top: 20px;
+        }
+
+        #buttonContainer button {
+            color: green;
+            margin: 0 10px;
+            padding: 25px 40px;
+            font-size: 25px;
+        }
+
+        button {
+            margin: 0 10px;
+            padding: 10px 20px;
+            font-size: 16px;
+        }
+
+        #mobileControls {
+            display: flex;
+            justify-content: center;
+            margin-top: 20px;
+        }
+
+        #mobileControls button {
+            margin: 0 20px;
+            padding: 30px 60px;
+            font-size: 30px;
+        }
+    </style>
+</head>
+<body>
+    <h1 style="color:white;" class="not-selectable">STEP bounties are falling STEEPly!<br>Catch it! Avoid FUD !</h1>
+    <div id="buttonContainer">
+        <button class="not-selectable" id="startButton"><b>Start GM !</b></button>
+        <button class="not-selectable" id="restartButton" style="display: none;"><b>Play Again</b></button>
+    </div>
+    <div id="gameContainer">
+        <canvas id="gameCanvas" width="400" height="400"></canvas>
+        <div id="mobileControls">
+            <button class="not-selectable" id="leftButton">Left</button>
+            <button class="not-selectable" id="rightButton">Right</button>
+        </div>
+    </div>
+    <audio id="backgroundMusic" loop>
+        <source src="./music.mp3" type="audio/mpeg">
+    </audio>
+    <audio id="fud" loop>
+        <source src="./fud.mp3" type="audio/mpeg">
+    </audio>
+    <audio id="money" loop>
+        <source src="./money.mp3" type="audio/mpeg">
+    </audio>
+    <script>
+        // Game variables
+        var canvas;
+        var ctx;
+        var boxX;
+        var boxY;
+        var boxWidth;
+        var boxHeight;
+        var circleRadius;
+        var triangleSide;
+        var circleSpeed;
+        var triangleSpeed;
+        var score;
+        var lives;
+
+        // Game state variables
+        var gameStarted;
+        var gameOver;
+
+        // Arrow key states
+        var arrowKeyStates = {
+            ArrowLeft: false,
+            ArrowRight: false
+        };
+
+        // Start the game when the start button is clicked
+        document.getElementById("startButton").addEventListener("click", startGame);
+
+        // Restart the game when the restart button is clicked
+        document.getElementById("restartButton").addEventListener("click", startGame);
+
+        // Initialize game variables and start the game loop
+        function startGame() {
+            document.getElementById("backgroundMusic").play();
+            canvas = document.getElementById("gameCanvas");
+            ctx = canvas.getContext("2d");
+
+            boxWidth = 50;
+            boxHeight = 50;
+            boxX = (canvas.width - boxWidth) / 2;
+            boxY = canvas.height - boxHeight;
+            circleRadius = 20;
+            triangleSide = 40;
+            circleSpeed = 2;
+            triangleSpeed = 3;
+            score = 0;
+            lives = 3;
+
+            gameStarted = true;
+            gameOver = false;
+
+            document.getElementById("startButton").style.display = "none";
+            document.getElementById("restartButton").style.display = "none";
+
+            document.addEventListener("keydown", handleKeyDown);
+            document.addEventListener("keyup", handleKeyUp);
+
+            circles = [];
+            triangles = [];
+
+            gameLoop();
+        }
+
+        // Game loop
+        function gameLoop() {
+            if (gameStarted && !gameOver) {
+                update();
+                draw();
+                requestAnimationFrame(gameLoop);
+            }
+        }
+
+        // Update game objects and check for collisions
+        function update() {
+            // Update player position
+            var moveAmount = 5;
+
+            if (arrowKeyStates.ArrowLeft && boxX > 0) {
+                boxX -= moveAmount;
+            }
+
+            if (arrowKeyStates.ArrowRight && boxX + boxWidth < canvas.width) {
+                boxX += moveAmount;
+            }
+
+            // Update falling objects
+            var fallingSpeed = circleSpeed + Math.floor(score / 10); // Increase falling speed with score
+
+            // Update circles
+            for (var i = 0; i < circles.length; i++) {
+                circles[i].y += fallingSpeed;
+
+                if (circles[i].y + circleRadius > boxY && circles[i].y < boxY + boxHeight &&
+                    circles[i].x + circleRadius > boxX && circles[i].x < boxX + boxWidth) {
+                    var moneySound = document.getElementById("money");
+                    moneySound.loop = false;
+                    moneySound.play();
+                    score++;
+                    circles.splice(i, 1);
+                    i--;
+                } else if (circles[i].y > canvas.height) {
+                    circles.splice(i, 1);
+                    i--;
+                }
+            }
+
+            // Update triangles
+            for (var i = 0; i < triangles.length; i++) {
+                triangles[i].y += fallingSpeed*1.15;
+
+                if (triangles[i].y + triangleSide > boxY && triangles[i].y < boxY + boxHeight &&
+                    triangles[i].x + triangleSide > boxX && triangles[i].x < boxX + boxWidth) {
+                    lives--;
+                    triangles.splice(i, 1);
+                    i--;
+
+                    var triangleSound = document.getElementById("fud");
+                    triangleSound.loop = false;
+                    triangleSound.play();
+
+                    if (lives === 0) {
+                        gameOver = true;
+                    }
+                } else if (triangles[i].y > canvas.height) {
+                    triangles.splice(i, 1);
+                    i--;
+                }
+            }
+
+            // Generate new circles and triangles randomly
+            if (Math.random() < 0.02) {
+                var circleX = Math.random() * (canvas.width - circleRadius * 2);
+                circles.push({ x: circleX, y: -circleRadius });
+            }
+
+            if (Math.random() < 0.01) {
+                var triangleX = Math.random() * (canvas.width - triangleSide);
+                triangles.push({ x: triangleX, y: -triangleSide });
+            }
+        }
+
+        // Draw game objects
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Draw player image
+            var playerImg = new Image();
+            playerImg.src = "player.png";
+            ctx.drawImage(playerImg, boxX, boxY, boxWidth, boxHeight);
+
+            // Draw bonus images
+            var bonusImg = new Image();
+            bonusImg.src = "bonus.png";
+            for (var i = 0; i < circles.length; i++) {
+                ctx.drawImage(bonusImg, circles[i].x, circles[i].y, circleRadius * 2, circleRadius * 2);
+            }
+
+            // Draw bad images
+            var badImg = new Image();
+            badImg.src = "bad.png";
+            for (var i = 0; i < triangles.length; i++) {
+                ctx.drawImage(badImg, triangles[i].x, triangles[i].y, triangleSide, triangleSide);
+            }
+
+            // Draw score and lives
+            ctx.fillStyle = "#000000";
+            ctx.font = "20px Arial";
+            ctx.fillText("Score: " + score, 10, 25);
+            ctx.fillText("Lives: " + lives, 10, 50);
+
+            // Check for game over
+            if (gameOver) {
+                ctx.fillStyle = "#FF0000";
+                ctx.font = "30px Arial";
+                ctx.fillText("GM OVER :(", canvas.width / 2 - 80, canvas.height / 2);
+                document.getElementById("restartButton").style.display = "block";
+            }
+        }
+
+        // Handle keydown event
+        function handleKeyDown(event) {
+            if (event.key in arrowKeyStates) {
+                arrowKeyStates[event.key] = true;
+            }
+        }
+
+        // Handle keyup event
+        function handleKeyUp(event) {
+            if (event.key in arrowKeyStates) {
+                arrowKeyStates[event.key] = false;
+            }
+        }
+
+        // Mobile button events
+        document.getElementById("leftButton").addEventListener("touchstart", function() {
+            arrowKeyStates.ArrowLeft = true;
+        });
+        document.getElementById("leftButton").addEventListener("touchend", function() {
+            arrowKeyStates.ArrowLeft = false;
+        });
+
+        document.getElementById("rightButton").addEventListener("touchstart", function() {
+            arrowKeyStates.ArrowRight = true;
+        });
+        document.getElementById("rightButton").addEventListener("touchend", function() {
+            arrowKeyStates.ArrowRight = false;
+        });
+
+        // Mobile button events
+        if (/Mobi|Android/i.test(navigator.userAgent)) {
+            // Hide buttons on mobile devices
+            document.getElementById("mobileControls").style.display = "block";
+
+            document.getElementById("leftButton").addEventListener("touchstart", function() {
+                arrowKeyStates.ArrowLeft = true;
+            });
+            document.getElementById("leftButton").addEventListener("touchend", function() {
+                arrowKeyStates.ArrowLeft = false;
+            });
+
+            document.getElementById("rightButton").addEventListener("touchstart", function() {
+                arrowKeyStates.ArrowRight = true;
+            });
+            document.getElementById("rightButton").addEventListener("touchend", function() {
+                arrowKeyStates.ArrowRight = false;
+            });
+        } else {
+            // Hide buttons on non-mobile devices
+            document.getElementById("mobileControls").style.display = "none";
+        }
+
+    </script>
+</body>
+</html>
